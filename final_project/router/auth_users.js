@@ -57,7 +57,6 @@ regd_users.put("/auth/review/:isbn", (req, res) => {
     const isbn = req.params.isbn;
     const review = req.query.review;
 
-    // ✅ Correct way to access username stored in session
     const username = req.session.authorization?.username;
 
     if (!username) {
@@ -72,12 +71,10 @@ regd_users.put("/auth/review/:isbn", (req, res) => {
         return res.status(404).json({ message: "Book not found." });
     }
 
-    // ✅ Ensure 'reviews' exists
     if (!books[isbn].reviews) {
         books[isbn].reviews = {};
     }
 
-    // ✅ Add or update the review for that user
     books[isbn].reviews[username] = review;
 
     return res.status(200).json({
@@ -91,7 +88,6 @@ regd_users.put("/auth/review/:isbn", (req, res) => {
 regd_users.delete("/auth/review/:isbn", (req, res) => {
     const isbn = req.params.isbn;
 
-    // ✅ Get username from session
     const username = req.session.authorization?.username;
 
     if (!username) {

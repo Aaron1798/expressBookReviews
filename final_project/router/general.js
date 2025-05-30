@@ -1,3 +1,4 @@
+const axios = require('axios');
 const express = require('express');
 let books = require("./booksdb.js");
 let isValid = require("./auth_users.js").isValid;
@@ -30,12 +31,43 @@ public_users.post("/register", (req, res) => {
   });
 
 
+  public_users.get('/promise-books', (req, res) => {
+    axios.get('http://localhost:5000/')
+        .then(response => {
+            res.status(200).send(response.data);
+        })
+        .catch(error => {
+            res.status(500).json({ message: "Error fetching books", error: error.message });
+        });
+});
+
+  
  
 // Get the book list available in the shop
 public_users.get('/', function(req, res) {
     return res.status(200).send(JSON.stringify(books, null, 4));
   });
  
+
+
+  public_users.get('/axios/isbn/:isbn', (req, res) => {
+    const isbn = req.params.isbn;
+  
+    new Promise((resolve, reject) => {
+      const book = books[isbn];
+      if (book) {
+        resolve(book);
+      } else {
+        reject('Book not found');
+      }
+    })
+    .then(bookDetails => {
+      res.status(200).json(bookDetails);
+    })
+    .catch(error => {
+      res.status(404).json({ message: error });
+    });
+  });
 
 
 // Get book details based on ISBN
@@ -49,6 +81,35 @@ public_users.get('/isbn/:isbn', function(req, res) {
       return res.status(404).json({ message: "Book not found" });
     }
   });
+
+
+  public_users.get('/axios/author/:author', async (req, res) => {
+    const author = req.params.author;
+
+    try {
+        const matchingBooks = await new Promise((resolve, reject) => {
+            const results = [];
+
+            for (let key in books) {
+                if (books[key].author.toLowerCase() === author.toLowerCase()) {
+                    results.push({ isbn: key, ...books[key] });
+                }
+            }
+
+            if (results.length > 0) {
+                resolve(results);
+            } else {
+                reject("No books found by that author.");
+            }
+        });
+
+        return res.status(200).json(matchingBooks);
+    } catch (err) {
+        return res.status(404).json({ message: err });
+    }
+});
+
+
  
 // Get book details based on author
 public_users.get('/author/:author', function(req, res) {
@@ -70,6 +131,31 @@ public_users.get('/author/:author', function(req, res) {
   });
  
 
+
+// Route to get book details by title using Axios + async/await
+public_users.get('/axios/title/:title', async (req, res) => {
+    try {
+      const titleParam = req.params.title.toLowerCase();
+      
+      // Use Axios to fetch the full book list
+      const response = await axios.get('http://localhost:5000/');
+      const booksData = response.data;
+  
+      // Search for books with matching title
+      const matchingBooks = Object.values(booksData).filter(book =>
+        book.title.toLowerCase() === titleParam
+      );
+  
+      if (matchingBooks.length > 0) {
+        res.status(200).json(matchingBooks);
+      } else {
+        res.status(404).json({ message: "No books found with that title." });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error", error: error.message });
+    }
+  });
+  
 
 // Get all books based on title
 public_users.get('/title/:title', function(req, res) {
